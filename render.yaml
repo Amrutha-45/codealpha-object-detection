@@ -22,7 +22,7 @@ services:
       #   https://visiontrack-frontend.onrender.com
       # You can set multiple origins separated by commas.
       - key: CORS_ORIGINS
-        value: https://visiontrack-frontend.onrender.com
+        value: https://codealpha-object-detection-three.vercel.app,http://localhost:5173
     healthCheckPath: /health
     # Render free tier spins down after inactivity — first request may be slow.
     # Upgrade to a paid plan to keep it always-on.

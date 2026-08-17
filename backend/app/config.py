@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     reload: bool = True
 
     # --- CORS ---
-    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173,https://codealpha-object-detection-three.vercel.app"
 
     # --- YOLO Model ---
     model_weights_path: str = "weights/yolov8n.pt"

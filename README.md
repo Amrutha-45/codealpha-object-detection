@@ -3,9 +3,6 @@
 > **CodeAlpha Artificial Intelligence Internship Project**
 > Production-grade real-time AI object detection and persistent multi-object tracking powered by **YOLOv8** and **ByteTrack**, featuring a glassmorphic dashboard built with **React**, **TypeScript**, **Framer Motion**, **Tailwind CSS**, and **FastAPI**.
 
-![VisionTrack AI Dashboard](https://via.placeholder.com/1200x675/0f172a/38bdf8?text=VisionTrack+AI+Dashboard+Screenshot)
-
----
 
 ## 📖 Overview
 
@@ -33,18 +30,6 @@ The backend is a high-performance **FastAPI** service running **Ultralytics YOLO
 - **Detection History Table**: Search, filter by category/class/confidence, and view raw bounding boxes
 - **Data Export**: Export detection history and session statistics in **JSON** or **CSV** formats
 - **Settings & Hotkeys**: Customizable YOLO model variants (`yolov8n`, `yolov8s`, `yolov8m`), confidence threshold sliders, theme toggle, and keyboard shortcuts (`Cmd+K`, `1-5`, `Esc`)
-
----
-
-## 🖼️ UI Screenshots & Previews
-
-| Landing Page | Live Dashboard |
-|---|---|
-| ![Landing Hero](https://via.placeholder.com/600x350/090d16/38bdf8?text=Landing+Hero+Preview) | ![Live Dashboard](https://via.placeholder.com/600x350/0f172a/c084fc?text=Live+Dashboard+Preview) |
-
-| Detection History & Export | Analytics & Performance |
-|---|---|
-| ![History Table](https://via.placeholder.com/600x350/090d16/34d399?text=Detection+History+Table) | ![Analytics Charts](https://via.placeholder.com/600x350/0f172a/fbbf24?text=Analytics+Charts) |
 
 ---
 

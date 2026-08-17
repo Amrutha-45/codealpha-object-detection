@@ -1,0 +1,31 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+venv/
+.venv/
+env/
+*.log
+
+# --- Backend runtime artifacts ---
+backend/.env
+backend/weights/*.pt
+backend/storage/uploads/*
+backend/storage/outputs/*
+backend/storage/screenshots/*
+!backend/storage/uploads/.gitkeep
+!backend/storage/outputs/.gitkeep
+!backend/storage/screenshots/.gitkeep
+backend/logs/
+
+# --- Node / Frontend ---
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/*.local
+
+# --- Editor / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

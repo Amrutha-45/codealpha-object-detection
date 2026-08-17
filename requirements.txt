@@ -1,0 +1,16 @@
+# =========================================================
+# Root-level convenience file
+# =========================================================
+# The actual backend dependencies live in backend/requirements.txt
+# so the FastAPI service and its virtual environment stay self-contained.
+#
+# Quick start:
+#   cd backend
+#   python -m venv venv
+#   source venv/bin/activate   # Windows: venv\Scripts\activate
+#   pip install -r requirements.txt
+#
+# This file exists only so tools that scan the repo root (e.g. some CI
+# templates, Heroku-style buildpacks) can discover it. It simply installs
+# the same backend requirements.
+-r backend/requirements.txt

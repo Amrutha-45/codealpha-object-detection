@@ -1,0 +1,135 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  body {
+    @apply bg-[#050811] text-slate-100 font-sans antialiased selection:bg-cyan-500/30 selection:text-cyan-200;
+    background-image: 
+      radial-gradient(circle at 15% 10%, rgba(56, 189, 248, 0.12), transparent 45%),
+      radial-gradient(circle at 85% 30%, rgba(192, 132, 252, 0.09), transparent 40%),
+      radial-gradient(circle at 50% 90%, rgba(14, 165, 233, 0.08), transparent 50%);
+    background-attachment: fixed;
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.6);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(56, 189, 248, 0.25);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(56, 189, 248, 0.5);
+  }
+}
+
+@layer components {
+  /* Futuristic Glass Card */
+  .card-glass {
+    @apply relative overflow-hidden rounded-2xl border border-slate-800/80 bg-slate-900/60 backdrop-blur-xl shadow-card transition-all duration-300;
+  }
+  .card-glass:hover {
+    @apply border-slate-700/80 shadow-glow;
+  }
+
+  .glass-pill {
+    @apply rounded-full border border-slate-700/50 bg-slate-900/50 backdrop-blur-md px-3 py-1 text-xs font-medium text-slate-300;
+  }
+
+  /* Buttons */
+  .btn-primary {
+    @apply relative inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 px-5 py-2.5 text-sm font-semibold text-white transition-all duration-300 shadow-lg shadow-cyan-500/20 hover:shadow-cyan-500/40 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-slate-700/80 bg-slate-800/50 backdrop-blur-md px-5 py-2.5 text-sm font-semibold text-slate-200 transition-all duration-300 hover:bg-slate-700/60 hover:border-slate-600 hover:text-white active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 px-5 py-2.5 text-sm font-semibold text-white transition-all duration-300 shadow-lg shadow-rose-600/20 hover:shadow-rose-600/40 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-slate-400 transition-colors hover:bg-slate-800/60 hover:text-slate-100;
+  }
+
+  /* Section Title */
+  .section-title {
+    @apply text-xs font-bold uppercase tracking-wider text-cyan-400/90;
+  }
+
+  /* Glow Effects */
+  .neon-text-cyan {
+    text-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
+  }
+  .neon-text-purple {
+    text-shadow: 0 0 12px rgba(192, 132, 252, 0.5);
+  }
+
+  /* Loading shimmer skeleton */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      rgba(30, 41, 59, 0) 0%,
+      rgba(56, 189, 248, 0.08) 50%,
+      rgba(30, 41, 59, 0) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.6s infinite;
+  }
+
+  /* Quick filter bar — hide scrollbar but keep scrolling */
+  .quick-filter-scroll {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .quick-filter-scroll::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer utilities {
+  /* Shimmer animation */
+  @keyframes shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  /* Inspector slide-in (for non-Framer-Motion fallback) */
+  @keyframes slideInRight {
+    from { transform: translateX(40px); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+  }
+  .slide-in-right {
+    animation: slideInRight 0.25s ease-out forwards;
+  }
+
+  /* Pulse ring for active detection */
+  @keyframes pulseRing {
+    0%   { transform: scale(1);    opacity: 0.6; }
+    100% { transform: scale(1.8);  opacity: 0;   }
+  }
+  .pulse-ring::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    border: 2px solid currentColor;
+    animation: pulseRing 1.5s ease-out infinite;
+  }
+}

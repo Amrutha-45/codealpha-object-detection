@@ -1,0 +1,48 @@
+services:
+  # ─────────────────────────────────────────────
+  # 1. FastAPI Backend  →  Render Web Service
+  # ─────────────────────────────────────────────
+  - type: web
+    name: visiontrack-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: ENVIRONMENT
+        value: production
+      - key: DEVICE
+        value: cpu
+      - key: RELOAD
+        value: "false"
+      # IMPORTANT: After the frontend is deployed, update CORS_ORIGINS to include
+      # the actual Render static-site URL, e.g.:
+      #   https://visiontrack-frontend.onrender.com
+      # You can set multiple origins separated by commas.
+      - key: CORS_ORIGINS
+        value: https://visiontrack-frontend.onrender.com
+    healthCheckPath: /health
+    # Render free tier spins down after inactivity — first request may be slow.
+    # Upgrade to a paid plan to keep it always-on.
+
+  # ─────────────────────────────────────────────
+  # 2. React / Vite Frontend  →  Render Static Site
+  # ─────────────────────────────────────────────
+  - type: web
+    name: visiontrack-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      # Set this to your deployed backend URL BEFORE triggering the build.
+      # Example: https://visiontrack-backend.onrender.com
+      - key: VITE_API_BASE_URL
+        sync: false   # manage in Render dashboard so the URL stays secret
+    routes:
+      # SPA fallback — serve index.html for all client-side routes
+      - type: rewrite
+        source: /*
+        destination: /index.html

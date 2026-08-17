@@ -7,7 +7,7 @@
  */
 
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, SlidersHorizontal } from 'lucide-react'
+import { X, SlidersHorizontal, RotateCcw } from 'lucide-react'
 import { CLASS_ICONS, getClassColor, DETECTABLE_CLASSES } from '../../types/detection'
 import type { DetectionScopeMode } from '../../types/detection'
 
@@ -26,15 +26,16 @@ export default function ActiveFilters({
   onScopeModeChange,
   disabled,
 }: ActiveFiltersProps) {
-  if (scopeMode !== 'detect-selected') return null
-  if (selectedClasses.length === 0) return null
+  if (scopeMode !== 'detect-selected' || selectedClasses.length === 0) return null
 
   const removeClass = (cls: string) => {
     if (disabled) return
     const remaining = selectedClasses.filter((c) => c !== cls)
-    onChange(remaining)
     if (remaining.length === 0) {
+      onChange([])
       onScopeModeChange?.('detect-all')
+    } else {
+      onChange(remaining)
     }
   }
 
@@ -52,12 +53,12 @@ export default function ActiveFilters({
       className="overflow-hidden"
     >
       <div className="flex items-center gap-2 flex-wrap pt-1">
-        <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-          <SlidersHorizontal size={10} />
+        <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+          <SlidersHorizontal size={10} className="text-cyan-400" />
           Active Filters
         </span>
 
-        <AnimatePresence>
+        <AnimatePresence mode="popLayout">
           {selectedClasses.map((cls) => {
             const colors = getClassColor(cls)
             const icon = CLASS_ICONS[cls] ?? '●'
@@ -69,40 +70,40 @@ export default function ActiveFilters({
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.7 }}
                 transition={{ duration: 0.15 }}
-                className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold capitalize ${colors.border} ${colors.bg} ${colors.text}`}
+                className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold capitalize ${colors.border} ${colors.bg} ${colors.text} shadow-sm`}
               >
                 <span>{icon}</span>
                 <span>{cls}</span>
                 <button
+                  type="button"
                   onClick={() => removeClass(cls)}
                   disabled={disabled}
                   aria-label={`Remove ${cls} filter`}
-                  className="ml-0.5 rounded-full hover:bg-white/10 transition-colors p-0.5 disabled:pointer-events-none"
+                  className="ml-0.5 rounded-full hover:bg-white/20 transition-colors p-0.5 disabled:pointer-events-none text-slate-300 hover:text-white"
                 >
-                  <X size={10} />
+                  <X size={11} strokeWidth={2.5} />
                 </button>
               </motion.div>
             )
           })}
         </AnimatePresence>
 
-        {selectedClasses.length > 1 && (
-          <motion.button
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            onClick={clearAll}
-            disabled={disabled}
-            className="text-[10px] font-bold text-slate-500 hover:text-rose-400 transition-colors ml-1 disabled:opacity-40 disabled:pointer-events-none"
-          >
-            Clear All
-          </motion.button>
-        )}
+        <motion.button
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          onClick={clearAll}
+          disabled={disabled}
+          className="text-[10px] font-bold text-slate-400 hover:text-rose-400 transition-colors ml-1 disabled:opacity-40 disabled:pointer-events-none flex items-center gap-1"
+        >
+          <RotateCcw size={9} /> Reset to All
+        </motion.button>
 
         {/* Count indicator */}
         <span className="ml-auto text-[10px] font-mono text-slate-500">
-          {selectedClasses.length}/{DETECTABLE_CLASSES.length} selected
+          {selectedClasses.length}/{DETECTABLE_CLASSES.length} active
         </span>
       </div>
     </motion.div>
   )
 }
+

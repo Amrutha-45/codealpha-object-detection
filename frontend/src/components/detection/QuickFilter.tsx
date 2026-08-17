@@ -2,7 +2,7 @@
  * QuickFilter.tsx
  * ===============
  * Horizontal scrollable quick-filter pill bar rendered above the detection image.
- * Clicking a class pill toggles it in/out of the selected filter set.
+ * Clicking a class pill selects or toggles that class in the active filter.
  * The "All" pill clears individual selections (meaning: detect all classes).
  */
 
@@ -30,12 +30,16 @@ export default function QuickFilter({
 
   const selectClass = (className: string) => {
     if (disabled) return
-    if (effectiveSelected.length === 1 && effectiveSelected[0] === className) {
-      // Clicking active class again toggles back to All
+    if (isDetectAll) {
+      // Switch to detect-selected with this single class
+      onChange([className])
+      onScopeModeChange?.('detect-selected')
+    } else if (effectiveSelected.length === 1 && effectiveSelected[0] === className) {
+      // Clicking active single class toggles back to All
       onChange([])
       onScopeModeChange?.('detect-all')
     } else {
-      // Single selection: replace previous class with newly selected class
+      // Single selection on quick bar: focus on this class
       onChange([className])
       onScopeModeChange?.('detect-selected')
     }
@@ -59,12 +63,12 @@ export default function QuickFilter({
           aria-label="Show all classes"
           className={`flex-shrink-0 flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-bold transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-cyan-400 disabled:opacity-40 disabled:pointer-events-none ${
             effectiveSelected.length === 0
-              ? 'border-cyan-500/60 bg-cyan-500/15 text-cyan-300 shadow-[0_0_10px_rgba(34,211,238,0.2)]'
+              ? 'border-cyan-500/60 bg-cyan-500/15 text-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.25)]'
               : 'border-slate-700/60 bg-slate-900/50 text-slate-400 hover:border-slate-600 hover:text-slate-200'
           }`}
         >
           <span className="text-[11px]">✦</span>
-          <span>All</span>
+          <span>All Classes</span>
         </motion.button>
 
         {/* Class pills */}
@@ -81,7 +85,7 @@ export default function QuickFilter({
               aria-pressed={active}
               className={`flex-shrink-0 flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold capitalize transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-cyan-400 disabled:opacity-40 disabled:pointer-events-none ${
                 active
-                  ? `${colors.border} ${colors.bg} ${colors.text} shadow-sm`
+                  ? `${colors.border} ${colors.bg} ${colors.text} shadow-sm border-opacity-80`
                   : 'border-slate-700/60 bg-slate-900/50 text-slate-400 hover:border-slate-600 hover:text-slate-200'
               }`}
             >
@@ -100,3 +104,4 @@ export default function QuickFilter({
     </div>
   )
 }
+

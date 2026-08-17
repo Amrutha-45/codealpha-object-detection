@@ -4,13 +4,12 @@
  * Premium image detection panel.
  *
  * Features:
- * - "Analyze Image" button (only shown before first analysis)
- * - Auto-inference on scope mode / filter / confidence changes via useImageInference hook
+ * - Direct "Run Image Inference" button always available to re-run on demand
+ * - Automatic re-inference on scope mode / filter / confidence changes via useImageInference hook
  * - QuickFilter bar above image
- * - ActiveFilters chips
+ * - ActiveFilters chips with individual removal & reset
  * - Per-class colored bounding boxes (BoundingBoxOverlay)
  * - ObjectInspector (click any box)
- * - DetectionStats bar chart below image
  * - Loading blur + "Analyzing..." overlay during inference
  * - Canvas-based annotated image download (reflects current filter)
  * - Saves entry to Detection History on each successful inference
@@ -27,6 +26,7 @@ import {
   RefreshCw,
   AlertTriangle,
   RotateCcw,
+  Play,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import type { ImageDetectionResponse, DetectionScopeMode, HistoryEntry, TrackedObject } from '../../types/detection'
@@ -61,11 +61,11 @@ export default function ImageUploadPanel({
   const [file, setFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
-  const [hasAnalyzed, setHasAnalyzed] = useState(false)   // after first click → auto mode
+  const [hasAnalyzed, setHasAnalyzed] = useState(false)
   const [selectedObject, setSelectedObject] = useState<TrackedObject | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Inference fires automatically once hasAnalyzed=true
+  // Hook handles auto-inference + exposes runInference for manual clicks
   const {
     rawResult,
     filteredObjects,
@@ -73,6 +73,7 @@ export default function ImageUploadPanel({
     isError,
     errorMessage,
     resetResult,
+    runInference,
     retryFn,
     cancelFn,
   } = useImageInference({
@@ -111,7 +112,7 @@ export default function ImageUploadPanel({
     if (previewUrl) URL.revokeObjectURL(previewUrl)
     setFile(candidate)
     setPreviewUrl(URL.createObjectURL(candidate))
-    setHasAnalyzed(false)  // require manual first click on new image
+    setHasAnalyzed(false)
     resetResult()
     setSelectedObject(null)
   }
@@ -124,10 +125,13 @@ export default function ImageUploadPanel({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [previewUrl])
 
-  // First-time analysis button click
-  const handleFirstAnalysis = () => {
-    setHasAnalyzed(true)
-    // useImageInference will fire immediately because enabled flips to true with same deps
+  // First-time or manual analysis button click
+  const handleTriggerAnalysis = () => {
+    if (!hasAnalyzed) {
+      setHasAnalyzed(true)
+    } else {
+      runInference()
+    }
   }
 
   const reset = () => {
@@ -160,15 +164,15 @@ export default function ImageUploadPanel({
 
         // Box outline
         ctx.strokeStyle = '#22d3ee'
-        ctx.lineWidth = 2
+        ctx.lineWidth = 3
         ctx.strokeRect(x1, y1, w, h)
 
         // Label background
         const label = `${obj.class_name} ${Math.round(obj.confidence * 100)}%`
-        ctx.font = 'bold 14px Inter, sans-serif'
+        ctx.font = 'bold 15px Inter, sans-serif'
         const tw = ctx.measureText(label).width
-        ctx.fillStyle = 'rgba(34, 211, 238, 0.85)'
-        ctx.fillRect(x1, y1 - 22, tw + 12, 20)
+        ctx.fillStyle = 'rgba(34, 211, 238, 0.9)'
+        ctx.fillRect(x1, y1 - 24, tw + 12, 22)
 
         // Label text
         ctx.fillStyle = '#0f172a'
@@ -180,7 +184,7 @@ export default function ImageUploadPanel({
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = 'annotated_detection.png'
+        a.download = `visiontrack_${Date.now()}.png`
         a.click()
         URL.revokeObjectURL(url)
         toast.success('Annotated image downloaded!')
@@ -189,9 +193,6 @@ export default function ImageUploadPanel({
     img.src = previewUrl
   }
 
-  // Show the result view as soon as the user clicks Analyze (hasAnalyzed=true).
-  // We no longer gate on rawResult: BoundingBoxOverlay handles objects=[] + isInferring
-  // by showing the image with a loading spinner. This also keeps the image visible on error.
   const showResult = hasAnalyzed && !!previewUrl
 
   return (
@@ -202,18 +203,24 @@ export default function ImageUploadPanel({
           <ImageIcon size={18} className="text-cyan-400" />
           <p className="font-bold text-slate-100">Image Detection Engine</p>
         </div>
-        {rawResult && (
-          <div className="flex items-center gap-2">
-            <span className="glass-pill border-cyan-500/30 text-cyan-300 shadow-glow font-mono font-bold text-[11px]">
+        <div className="flex items-center gap-2">
+          {rawResult && (
+            <motion.span
+              key={filteredObjects.length}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="glass-pill border-cyan-500/30 text-cyan-300 shadow-glow font-mono font-bold text-[11px]"
+            >
               {filteredObjects.length} object{filteredObjects.length !== 1 ? 's' : ''} detected
+            </motion.span>
+          )}
+          {isInferring && (
+            <span className="text-[11px] font-semibold text-amber-400 animate-pulse flex items-center gap-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+              Running Inference...
             </span>
-            {isInferring && (
-              <span className="text-[10px] font-semibold text-amber-400 animate-pulse">
-                Re-analyzing...
-              </span>
-            )}
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <div className="p-6 space-y-4">
@@ -257,6 +264,7 @@ export default function ImageUploadPanel({
               <button
                 onClick={reset}
                 className="absolute right-3 top-3 rounded-full bg-slate-950/80 p-2 text-slate-300 hover:text-white transition-colors"
+                title="Remove image"
               >
                 <X size={16} />
               </button>
@@ -265,17 +273,18 @@ export default function ImageUploadPanel({
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
+              className="space-y-3"
             >
               <Button
                 variant="primary"
                 icon={<Sparkles size={16} />}
-                onClick={handleFirstAnalysis}
-                className="w-full py-3 text-base"
+                onClick={handleTriggerAnalysis}
+                className="w-full py-3.5 text-base font-bold shadow-lg shadow-cyan-500/20"
               >
-                Analyze Image
+                Run Image Inference
               </Button>
-              <p className="text-center text-[11px] text-slate-500 mt-2">
-                After the first analysis, filter changes automatically update results
+              <p className="text-center text-[11px] text-slate-500">
+                You can select target class filters on the right or quick bar before or after running inference
               </p>
             </motion.div>
           </div>
@@ -359,17 +368,37 @@ export default function ImageUploadPanel({
                 </AnimatePresence>
               </div>
 
-              {/* Actions */}
-              <div className="flex gap-3">
+              {/* Action Toolbar */}
+              <div className="flex flex-wrap items-center gap-3 pt-1">
+                {/* Re-run inference button */}
+                <Button
+                  variant="primary"
+                  icon={<Play size={15} className="fill-current" />}
+                  onClick={handleTriggerAnalysis}
+                  disabled={isInferring}
+                  className="flex-1 min-w-[180px] py-2.5 shadow-md"
+                >
+                  {isInferring ? 'Processing...' : 'Run Image Inference'}
+                </Button>
+
+                {/* Download */}
                 <button
                   onClick={handleDownloadAnnotated}
                   disabled={isInferring || !previewUrl}
-                  className="btn-primary flex-1 flex items-center justify-center gap-2 disabled:opacity-40"
+                  className="btn-secondary flex items-center justify-center gap-2 py-2.5 px-4 text-xs font-bold disabled:opacity-40"
+                  title="Download annotated image with current filters"
                 >
                   <Download size={15} />
-                  Download Annotated Image
+                  Download PNG
                 </button>
-                <Button variant="secondary" icon={<RefreshCw size={15} />} onClick={reset}>
+
+                {/* New Image */}
+                <Button
+                  variant="secondary"
+                  icon={<RefreshCw size={15} />}
+                  onClick={reset}
+                  className="py-2.5 px-4 text-xs"
+                >
                   New Image
                 </Button>
               </div>
@@ -380,3 +409,4 @@ export default function ImageUploadPanel({
     </div>
   )
 }
+

@@ -3,11 +3,12 @@
  * ====================
  * Encapsulates all state and side-effects for image-mode detection.
  *
- * Key behaviour:
+ * Key features:
  *  - Auto-fires inference whenever `file`, `selectedClasses`, `confidence`, or `scopeMode` changes.
- *  - 400 ms debounce prevents rapid filter clicks from hammering the backend.
+ *  - Exposes `runInference` directly so UI buttons ("Run Image Inference") can trigger it on demand.
+ *  - 250 ms debounce prevents rapid filter clicks from hammering the backend.
  *  - AbortController cancels any in-flight request before sending a new one.
- *  - `scopeMode === 'detect-all'`  → sends NO class filter (YOLO detects everything natively)
+ *  - `scopeMode === 'detect-all'` → sends NO class filter (YOLO detects everything natively)
  *  - `scopeMode === 'detect-selected'` → sends selectedClasses to backend (YOLO native classes= param)
  *  - On error: restores previous result and exposes a `retryFn` callback.
  *  - Exposes `isInferring` (true during request) so panels can show loading UI.
@@ -35,6 +36,7 @@ interface UseImageInferenceReturn {
   isError: boolean
   errorMessage: string | null
   resetResult: () => void
+  runInference: () => Promise<void>
   retryFn: () => void
   cancelFn: () => void
 }
@@ -52,6 +54,29 @@ export function useImageInference({
   const [isError, setIsError] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
+  // Stable references for in-flight tracking
+  const previousResultRef = useRef<ImageDetectionResponse | null>(null)
+  const abortRef = useRef<AbortController | null>(null)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const onResultRef = useRef(onResult)
+  onResultRef.current = onResult
+
+  // Keep latest params in refs to avoid stale closures in debounced / async runners
+  const latestParamsRef = useRef({
+    file,
+    selectedClasses,
+    confidence,
+    scopeMode,
+    enabled,
+  })
+  latestParamsRef.current = {
+    file,
+    selectedClasses,
+    confidence,
+    scopeMode,
+    enabled,
+  }
+
   // Derived filtered objects based on rawResult + scopeMode + selectedClasses
   const filteredObjects = useMemo(() => {
     if (!rawResult) return []
@@ -63,24 +88,22 @@ export function useImageInference({
     return allObjects
   }, [rawResult, scopeMode, selectedClasses])
 
-  // Keeps the last successful result so we can restore it on cancel or error
-  const previousResultRef = useRef<ImageDetectionResponse | null>(null)
-
-  // Holds the current AbortController so we can cancel in-flight requests
-  const abortRef = useRef<AbortController | null>(null)
-  // Holds the debounce timer
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
   const resetResult = useCallback(() => {
+    if (abortRef.current) {
+      abortRef.current.abort()
+      abortRef.current = null
+    }
     setRawResult(null)
     previousResultRef.current = null
     setIsError(false)
     setErrorMessage(null)
+    setIsInferring(false)
   }, [])
 
-  // Core inference runner — extracted so retryFn can call it immediately
+  // Core inference runner
   const runInference = useCallback(async () => {
-    if (!file || !enabled) return
+    const { file: currentFile, selectedClasses: currentClasses, confidence: currentConf, scopeMode: currentMode, enabled: isEnabled } = latestParamsRef.current
+    if (!currentFile || !isEnabled) return
 
     // Cancel any running request
     if (abortRef.current) abortRef.current.abort()
@@ -95,21 +118,24 @@ export function useImageInference({
       // 'detect-all': send undefined → backend detects all YOLO classes natively
       // 'detect-selected': send selectedClasses → backend uses YOLO classes= filter
       const classesToSend =
-        scopeMode === 'detect-selected' && selectedClasses.length > 0
-          ? selectedClasses
+        currentMode === 'detect-selected' && currentClasses.length > 0
+          ? currentClasses
           : undefined
 
-      const res = await detectImage(file, confidence, classesToSend, controller.signal)
+      const res = await detectImage(currentFile, currentConf, classesToSend, controller.signal)
 
       if (controller.signal.aborted) return  // stale response — discard
 
       previousResultRef.current = res
       setRawResult(res)
-      onResult?.(res)
+      onResultRef.current?.(res)
       setIsError(false)
       setErrorMessage(null)
+      
+      const count = res.result.objects.length
+      const filterLabel = classesToSend ? classesToSend.join(', ') : 'All Classes'
       toast.success(
-        `Detection complete — ${res.result.objects.length} object(s) found.`,
+        `Detection complete — ${count} object(s) found [${filterLabel}].`,
         { id: 'image-inference' },
       )
     } catch (err: unknown) {
@@ -124,8 +150,7 @@ export function useImageInference({
     } finally {
       if (!controller.signal.aborted) setIsInferring(false)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [file, selectedClasses, confidence, scopeMode, enabled])
+  }, [])
 
   const retryFn = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current)
@@ -140,25 +165,34 @@ export function useImageInference({
     }
   }, [])
 
+  // Auto-run inference with debounce whenever inputs change
   useEffect(() => {
-    // No file or disabled → clear results
     if (!file || !enabled) {
       resetResult()
       return
     }
 
-    // Clear any pending debounce
     if (timerRef.current) clearTimeout(timerRef.current)
 
     timerRef.current = setTimeout(() => {
       runInference()
-    }, 300)
+    }, 250)
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [file, selectedClasses, confidence, scopeMode, enabled])
+  }, [file, selectedClasses, confidence, scopeMode, enabled, runInference, resetResult])
 
-  return { rawResult, filteredObjects, isInferring, isError, errorMessage, resetResult, retryFn, cancelFn }
+  return {
+    rawResult,
+    filteredObjects,
+    isInferring,
+    isError,
+    errorMessage,
+    resetResult,
+    runInference,
+    retryFn,
+    cancelFn,
+  }
 }
+

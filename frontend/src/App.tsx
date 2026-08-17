@@ -54,28 +54,23 @@ export default function App() {
   // Class filter — only used when scopeMode === 'detect-selected'
   const [classFilter, setClassFilter] = useState<string[]>([])
 
-  const handleScopeModeChange = (mode: DetectionScopeMode) => {
+  const handleScopeModeChange = useCallback((mode: DetectionScopeMode) => {
     setScopeMode(mode)
     if (mode === 'detect-all') {
       setClassFilter([])
     } else {
-      // Use functional updater so we read the *latest queued* classFilter value,
-      // not the stale closure snapshot. Without this, when QuickFilter/ClassFilter
-      // call both onChange(classes) AND onScopeModeChange('detect-selected') in the
-      // same event, this handler sees classFilter=[] from the previous render and
-      // overwrites the user's selection with the default ['person'].
-      setClassFilter(prev => prev.length === 0 ? ['person'] : prev)
+      setClassFilter((prev) => (prev.length === 0 ? ['person'] : prev))
     }
-  }
+  }, [])
 
-  const handleClassFilterChange = (classes: string[]) => {
+  const handleClassFilterChange = useCallback((classes: string[]) => {
     setClassFilter(classes)
     if (classes.length === 0) {
       setScopeMode('detect-all')
     } else {
       setScopeMode('detect-selected')
     }
-  }
+  }, [])
 
   const [isWebcamActive, setIsWebcamActive] = useState(false)
   const [lastResultStats, setLastResultStats] = useState<DetectionStatsType | null>(null)
@@ -101,31 +96,6 @@ export default function App() {
   useEffect(() => {
     saveHistoryToStorage(historyEntries)
   }, [historyEntries])
-
-  // Sync top StatsCards when image result or filter changes
-  useEffect(() => {
-    if (activeMode === 'image' && currentImageResult) {
-      const objects = currentImageResult.result.objects
-      const filtered =
-        scopeMode === 'detect-all'
-          ? objects
-          : objects.filter((obj) =>
-              classFilter.map((c) => c.toLowerCase()).includes(obj.class_name.toLowerCase())
-            )
-
-      setLastResultStats({
-        total_objects_detected: filtered.length,
-        person_count: filtered.filter((o) => o.category === 'person').length,
-        vehicle_count: filtered.filter((o) => o.category === 'vehicle').length,
-        animal_count: filtered.filter((o) => o.category === 'animal').length,
-        other_count: filtered.filter((o) => o.category === 'object').length,
-        average_fps: currentImageResult.result.fps || 30.0,
-        average_inference_time_ms: currentImageResult.result.inference_time_ms,
-        active_track_ids: filtered.length,
-        session_duration_sec: 1,
-      })
-    }
-  }, [classFilter, scopeMode, currentImageResult, activeMode])
 
   // Keyboard hotkeys
   useEffect(() => {
@@ -170,7 +140,18 @@ export default function App() {
 
   const handleImageResult = useCallback((res: ImageDetectionResponse) => {
     setCurrentImageResult(res)
-    // Legacy: also track raw objects for any remaining history table consumers
+    const objects = res.result.objects
+    setLastResultStats({
+      total_objects_detected: objects.length,
+      person_count: objects.filter((o) => o.category === 'person').length,
+      vehicle_count: objects.filter((o) => o.category === 'vehicle').length,
+      animal_count: objects.filter((o) => o.category === 'animal').length,
+      other_count: objects.filter((o) => o.category === 'object').length,
+      average_fps: res.result.fps || 30.0,
+      average_inference_time_ms: res.result.inference_time_ms,
+      active_track_ids: objects.length,
+      session_duration_sec: 1,
+    })
   }, [])
 
   const handleClearHistory = () => {
@@ -183,7 +164,7 @@ export default function App() {
     ? scopeMode === 'detect-all'
       ? currentImageResult.result.objects
       : currentImageResult.result.objects.filter((o) =>
-          classFilter.map((c) => c.toLowerCase()).includes(o.class_name.toLowerCase())
+          classFilter.length === 0 || classFilter.map((c) => c.toLowerCase()).includes(o.class_name.toLowerCase())
         )
     : []
 
